@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.gitignore
+.github
+*.md
+docker-compose.yml
+Dockerfile
+.oxlintrc.json
+ui files
