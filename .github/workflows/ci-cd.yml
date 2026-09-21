@@ -1,4 +1,4 @@
-name: Backend CI/CD Pipeline
+name: Frontend CI/CD Pipeline
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
           npm run typecheck
           npm run lint
 
-      # 5. Build Project & Generate Prisma Client
+      # 5. Build Project
       - name: Build Application
         run: npm run build
 
@@ -67,7 +67,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/coworking-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/coworking-backend:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/coworking-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/coworking-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
