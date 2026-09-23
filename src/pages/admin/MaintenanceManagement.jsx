@@ -6,6 +6,18 @@ import Modal from '../../components/common/Modal';
 import EmptyState from '../../components/common/EmptyState';
 import { SkeletonRow } from '../../components/common/LoadingSpinner';
 import { collectionFrom } from '../../api/responseHelpers';
+import SuggestionInput from '../../components/common/SuggestionInput';
+
+export const MAINTENANCE_REASON_SUGGESTIONS = [
+  { value: 'Routine Deep Cleaning & Sanitation', label: 'Routine Deep Cleaning & Sanitation', icon: 'cleaning_services' },
+  { value: 'HVAC Air Filter Replacement & Servicing', label: 'HVAC Air Filter Replacement & Servicing', icon: 'ac_unit' },
+  { value: 'High-Speed Wi-Fi Router Upgrade', label: 'High-Speed Wi-Fi Router Upgrade', icon: 'router' },
+  { value: 'AV Display & Video Conference Calibration', label: 'AV Display & Video Conference Calibration', icon: 'tv' },
+  { value: 'Electrical Power Socket & Lighting Repair', label: 'Electrical Power Socket & Lighting Repair', icon: 'electrical_services' },
+  { value: 'Ergonomic Desk & Chair Inspection', label: 'Ergonomic Desk & Chair Inspection', icon: 'chair' },
+  { value: 'Interior Wall Painting & Touch-up', label: 'Interior Wall Painting & Touch-up', icon: 'format_paint' },
+  { value: 'Acoustic Soundproofing Maintenance', label: 'Acoustic Soundproofing Maintenance', icon: 'volume_off' },
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -167,22 +179,21 @@ const CreateMaintenanceModal = ({ isOpen, onClose, spaces, onCreated }) => {
             )}
           </div>
 
-          {/* Reason */}
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
-              Reason / Purpose <span className="text-error">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Deep cleaning, HVAC maintenance"
-              value={form.reason}
-              onChange={(e) => handleChange('reason', e.target.value)}
-              className={fieldCls(!!errors.reason)}
-            />
-            {errors.reason && (
-              <p className="mt-1 text-xs text-error">{errors.reason}</p>
-            )}
-          </div>
+          {/* Reason / Purpose with Suggestions */}
+          <SuggestionInput
+            label="Reason / Purpose"
+            name="reason"
+            required
+            placeholder="e.g. Routine Deep Cleaning, HVAC servicing"
+            icon="build"
+            value={form.reason}
+            onChange={(e) => handleChange('reason', e.target.value)}
+            error={errors.reason}
+            suggestions={MAINTENANCE_REASON_SUGGESTIONS}
+            chips={true}
+            maxChips={4}
+            className="mb-0"
+          />
 
           {/* Start / End in a 2-col grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

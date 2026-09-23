@@ -4,7 +4,55 @@ import spacesApi from '../../api/spacesApi';
 import { unwrapResponse } from '../../api/responseHelpers';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import SuggestionInput from '../../components/common/SuggestionInput';
 import { PageLoader } from '../../components/common/LoadingSpinner';
+
+// ─── Predefined Suggestions ───────────────────────────────────────────────────
+export const SPACE_TYPE_SUGGESTIONS = [
+  { value: 'HOT_DESK', label: 'Hot Desk (HOT_DESK)', description: 'Flexible open workstation in shared co-working area', icon: 'desk' },
+  { value: 'DEDICATED_DESK', label: 'Dedicated Desk (DEDICATED_DESK)', description: 'Reserved personal desk with lockable storage', icon: 'desktop_windows' },
+  { value: 'PRIVATE_OFFICE', label: 'Private Office (PRIVATE_OFFICE)', description: 'Enclosed furnished suite for teams of 2 to 10', icon: 'meeting_room' },
+  { value: 'MEETING_ROOM', label: 'Meeting Room (MEETING_ROOM)', description: 'Equipped with presentation screen & whiteboard', icon: 'groups' },
+  { value: 'CONFERENCE_ROOM', label: 'Conference Room (CONFERENCE_ROOM)', description: 'Executive boardroom with video conferencing AV', icon: 'co_present' },
+  { value: 'EVENT_SPACE', label: 'Event Space (EVENT_SPACE)', description: 'Large open-format venue for workshops & meetups', icon: 'theater_comedy' },
+  { value: 'POD', label: 'Quiet Focus Pod (POD)', description: 'Soundproof single-occupancy booth for private calls', icon: 'sensor_door' },
+  { value: 'PODCAST_STUDIO', label: 'Podcast Studio (PODCAST_STUDIO)', description: 'Acoustically treated studio with broadcast microphones', icon: 'mic' },
+];
+
+export const LOCATION_SUGGESTIONS = [
+  { value: 'Floor 1 — Main Atrium', label: 'Floor 1 — Main Atrium', description: 'Vibrant open area near cafe & reception', icon: 'storefront' },
+  { value: 'Floor 1 — Creative Hub', label: 'Floor 1 — Creative Hub', description: 'Collaborative brainstorm zone with mobile whiteboards', icon: 'palette' },
+  { value: 'Floor 2 — East Wing', label: 'Floor 2 — East Wing', description: 'Quiet focused workstations with natural window light', icon: 'business' },
+  { value: 'Floor 2 — West Wing', label: 'Floor 2 — West Wing', description: 'Team suites and private office corridor', icon: 'domain' },
+  { value: 'Floor 3 — Executive Suite Area', label: 'Floor 3 — Executive Suite Area', description: 'Premium private executive office suites', icon: 'apartment' },
+  { value: 'Floor 3 — Quiet Library Zone', label: 'Floor 3 — Quiet Library Zone', description: 'Strictly silent study and deep work zone', icon: 'local_library' },
+  { value: 'Building B — Suite 204', label: 'Building B — Suite 204', description: 'Secondary annex facility', icon: 'location_city' },
+  { value: 'Rooftop Garden Terrace', label: 'Rooftop Garden Terrace', description: 'Open-air patio with Wi-Fi and botanical lounge', icon: 'deck' },
+];
+
+export const AMENITIES_SUGGESTIONS = [
+  { value: 'High-Speed Fiber Wi-Fi', label: 'High-Speed Fiber Wi-Fi', icon: 'wifi' },
+  { value: '4K Display Monitor', label: '4K Display Monitor', icon: 'tv' },
+  { value: 'Whiteboard & Markers', label: 'Whiteboard & Markers', icon: 'draw' },
+  { value: 'Video Conferencing Equipment', label: 'Video Conferencing Equipment', icon: 'video_camera_front' },
+  { value: 'Ergonomic Task Chairs', label: 'Ergonomic Task Chairs', icon: 'chair' },
+  { value: 'Height-Adjustable Standing Desks', label: 'Height-Adjustable Standing Desks', icon: 'height' },
+  { value: 'Artisanal Coffee & Tea Bar', label: 'Artisanal Coffee & Tea Bar', icon: 'coffee' },
+  { value: '24/7 Keycard Access', label: '24/7 Keycard Access', icon: 'lock' },
+  { value: 'Soundproof Acoustic Treatment', label: 'Soundproof Acoustic Treatment', icon: 'volume_off' },
+  { value: 'Personal Lockers', label: 'Personal Lockers', icon: 'inventory_2' },
+  { value: 'Printing & Document Station', label: 'Printing & Document Station', icon: 'print' },
+  { value: 'Dual Power Outlets & USB-C', label: 'Dual Power Outlets & USB-C', icon: 'power' },
+];
+
+export const SPACE_NAME_SUGGESTIONS = [
+  { value: 'The Sahara Executive Boardroom', label: 'The Sahara Executive Boardroom', description: '12-seat executive suite with 4K display', icon: 'meeting_room' },
+  { value: 'Oasis Collaborative Studio', label: 'Oasis Collaborative Studio', description: 'Team breakout area for 8 people', icon: 'groups' },
+  { value: 'Zen Focus Pod Alpha', label: 'Zen Focus Pod Alpha', description: 'Single-person private phone booth', icon: 'sensor_door' },
+  { value: 'Dune Workstation Cluster #1', label: 'Dune Workstation Cluster #1', description: 'Hot desk cluster in main atrium', icon: 'desk' },
+  { value: 'Horizon Dedicated Desk E4', label: 'Horizon Dedicated Desk E4', description: 'Reserved desk with ergonomic chair', icon: 'desktop_windows' },
+  { value: 'Skyline Terrace Workspace', label: 'Skyline Terrace Workspace', description: 'Rooftop workspace with pergola & power', icon: 'deck' },
+];
 
 // ─── Initial form state ────────────────────────────────────────────────────────
 const INITIAL_FORM = {
@@ -44,7 +92,7 @@ export const CreateEditSpace = () => {
   // ── State ──────────────────────────────────────────────────────────────────
   const [form, setForm] = useState(INITIAL_FORM);
   const [errors, setErrors] = useState({});
-  const [spaceName, setSpaceName] = useState('');   // for page title in edit mode
+  const [spaceName, setSpaceName] = useState(''); // for page title in edit mode
 
   const [loadingSpace, setLoadingSpace] = useState(isEditMode);
   const [loadError, setLoadError] = useState(null);
@@ -242,23 +290,22 @@ export const CreateEditSpace = () => {
         <div className="pb-3 border-b border-outline-variant">
           <h2 className="text-sm font-semibold text-on-surface">Space Information</h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            All fields marked <span className="text-error font-semibold">*</span> are required.
+            All fields marked <span className="text-error font-semibold">*</span> are required. Use suggestion dropdowns or enter custom values.
           </p>
         </div>
 
-        {/* ── Name ──────────────────────────────────────────────────────────── */}
-        <Input
-          label="Name"
+        {/* ── Name with suggestions ──────────────────────────────────────────── */}
+        <SuggestionInput
+          label="Space Name"
           name="name"
           id="space-name"
-          type="text"
           required
-          placeholder="e.g. Sunrise Lounge"
+          placeholder="e.g. Sunrise Lounge, The Sahara Executive Boardroom"
           icon="meeting_room"
           value={form.name}
           onChange={handleChange}
           error={errors.name}
-          autoFocus={!isEditMode}
+          suggestions={SPACE_NAME_SUGGESTIONS}
         />
 
         {/* ── Description ───────────────────────────────────────────────────── */}
@@ -277,7 +324,7 @@ export const CreateEditSpace = () => {
               id="space-description"
               name="description"
               rows={4}
-              placeholder="Describe the space, its features, location, amenities…"
+              placeholder="Describe the space, its features, ambient noise level, natural light, etc."
               value={form.description}
               onChange={handleChange}
               className="w-full pl-10 pr-3.5 py-2.5 bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-3 focus:ring-primary/15 rounded-xl text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none transition resize-none"
@@ -285,46 +332,52 @@ export const CreateEditSpace = () => {
           </div>
         </div>
 
-        {/* ── Type & Location ─────────────────────────────────────────────────── */}
+        {/* ── Type & Location with suggestion dropdowns ──────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
-          <Input
+          <SuggestionInput
             label="Space Type"
             name="type"
             id="space-type"
-            type="text"
-            placeholder="e.g. MEETING_ROOM, HOT_DESK, POD"
+            placeholder="e.g. MEETING_ROOM, HOT_DESK"
             icon="category"
             value={form.type}
             onChange={handleChange}
+            suggestions={SPACE_TYPE_SUGGESTIONS}
+            helperText="Select from presets or enter custom type"
           />
-          <Input
+          <SuggestionInput
             label="Location / Area"
             name="location"
             id="space-location"
-            type="text"
-            placeholder="e.g. Floor 2, East Wing"
+            placeholder="e.g. Floor 2 — East Wing"
             icon="location_on"
             value={form.location}
             onChange={handleChange}
+            suggestions={LOCATION_SUGGESTIONS}
+            helperText="Select zone or type specific office/suite"
           />
         </div>
 
-        {/* ── Amenities ──────────────────────────────────────────────────────── */}
-        <Input
-          label="Amenities (comma-separated)"
+        {/* ── Amenities with multi-select dropdown and interactive chips ──────── */}
+        <SuggestionInput
+          label="Amenities (click suggestions or chips to add/remove)"
           name="amenities"
           id="space-amenities"
-          type="text"
-          placeholder="e.g. High-Speed Wi-Fi, 4K Display, Whiteboard, Ergonomic Chairs"
+          placeholder="e.g. High-Speed Fiber Wi-Fi, 4K Display Monitor, Whiteboard & Markers"
           icon="verified"
           value={form.amenities}
           onChange={handleChange}
+          suggestions={AMENITIES_SUGGESTIONS}
+          multi={true}
+          chips={true}
+          maxChips={12}
+          helperText="Multi-select enabled: click suggestions or pill chips to quickly toggle amenities"
         />
 
         {/* ── Capacity & Price (side-by-side on wider screens) ──────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
           <Input
-            label="Capacity"
+            label="Capacity (persons)"
             name="capacity"
             id="space-capacity"
             type="number"
