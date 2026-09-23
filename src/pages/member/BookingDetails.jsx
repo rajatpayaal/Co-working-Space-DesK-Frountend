@@ -16,6 +16,14 @@ export const BookingDetails = () => {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
 
+  const handleGoBack = () => {
+    if (window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/my-bookings');
+    }
+  };
+
   const fetchBooking = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -58,12 +66,10 @@ export const BookingDetails = () => {
   if (error || !booking) {
     return (
       <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-        <Link to="/my-bookings">
-          <Button variant="secondary" size="sm" className="mb-6">
-            <span className="material-symbols-outlined text-sm">arrow_back</span>
-            Back to My Bookings
-          </Button>
-        </Link>
+        <Button variant="secondary" size="sm" className="mb-6" onClick={handleGoBack}>
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+          Back to My Bookings
+        </Button>
         <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant p-10">
           <span className="material-symbols-outlined text-4xl text-error mb-2">event_busy</span>
           <h2 className="font-headline text-2xl text-on-surface">Reservation Not Found</h2>
@@ -80,12 +86,10 @@ export const BookingDetails = () => {
       {/* ── Page Header ────────────────────────────────────────────── */}
       <section className="bg-surface-container-lowest border-b border-outline-variant/60 py-6">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/my-bookings">
-            <Button variant="secondary" size="sm">
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
-              Back to My Bookings
-            </Button>
-          </Link>
+          <Button variant="secondary" size="sm" onClick={handleGoBack}>
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            Back to My Bookings
+          </Button>
           <span className="font-mono text-xs text-on-surface-variant">
             REF: #{booking.id.slice(0, 8).toUpperCase()}
           </span>

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import adminApi from '../../api/adminApi'; // kept — available for future use
-import { collectionFrom } from '../../api/responseHelpers';
+import adminApi from '../../api/adminApi';
+import usersApi from '../../api/usersApi';
 import spacesApi from '../../api/spacesApi';
 import bookingsApi from '../../api/bookingsApi';
+import { collectionFrom, unwrapResponse } from '../../api/responseHelpers';
 
 export const Dashboard = () => {
   const [stats, setStats] = useState({});
   const [bookings, setBookings] = useState([]);
-  const [activity, setActivity] = useState([]);
+  const [maintenanceItems, setMaintenanceItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -17,15 +18,33 @@ export const Dashboard = () => {
     setLoading(true);
     setError('');
 
-    Promise.all([
-      spacesApi.getAll({ limit: 100 }),
+    Promise.allSettled([
+      spacesApi.getAdminAll({ limit: 100 }),
       bookingsApi.getAdminAll({ limit: 100 }),
+      usersApi.getAll({ limit: 100 }),
+      adminApi.getMaintenance(),
     ])
-      .then(([spacesResponse, bookingsResponse]) => {
+      .then(([spacesRes, bookingsRes, usersRes, maintRes]) => {
         if (!active) return;
 
-        const spaces = collectionFrom(spacesResponse, ['spaces', 'items', 'records', 'data']);
-        const bookingRows = collectionFrom(bookingsResponse, ['bookings', 'items', 'records', 'data']);
+        const spaces = spacesRes.status === 'fulfilled'
+          ? collectionFrom(spacesRes.value, ['spaces', 'items', 'records', 'data'])
+          : [];
+
+        const bookingRows = bookingsRes.status === 'fulfilled'
+          ? collectionFrom(bookingsRes.value, ['bookings', 'items', 'records', 'data'])
+          : [];
+
+        const usersList = usersRes.status === 'fulfilled'
+          ? collectionFrom(usersRes.value, ['users', 'items', 'records', 'data'])
+          : [];
+        const totalUsers = usersRes.status === 'fulfilled'
+          ? (unwrapResponse(usersRes.value)?.pagination?.total ?? usersList.length)
+          : 0;
+
+        const maintList = maintRes.status === 'fulfilled'
+          ? collectionFrom(maintRes.value, ['maintenance', 'items', 'data'])
+          : [];
 
         const pending = bookingRows.filter(
           (b) => String(b.status).toUpperCase() === 'PENDING'
@@ -37,24 +56,24 @@ export const Dashboard = () => {
           (b) => String(b.status).toUpperCase() === 'CANCELLED'
         ).length;
 
-        // Derive total revenue from bookings that have an `amount` / `totalAmount` / `price` field
+        // Derive total revenue from bookings
         const totalRevenue = bookingRows.reduce((sum, b) => {
           const amt = Number(b.totalAmount ?? b.amount ?? b.price ?? 0);
           return sum + (isNaN(amt) ? 0 : amt);
         }, 0);
 
         setBookings(bookingRows.slice(0, 5));
+        setMaintenanceItems(maintList.slice(0, 5));
         setStats({
           totalSpaces: spaces.length,
+          totalUsers: totalUsers,
           totalBookings: bookingRows.length,
           pendingBookings: pending,
           approvedBookings: approved,
           cancelledBookings: cancelled,
           totalRevenue,
-          // totalUsers and maintenanceCount are not available from these endpoints;
-          // they will display '—' intentionally until a dedicated endpoint is wired up.
+          maintenanceCount: maintList.length,
         });
-        setActivity([]); // No activity-log endpoint available yet
       })
       .catch((e) => {
         if (active) {
@@ -70,12 +89,7 @@ export const Dashboard = () => {
     };
   }, []);
 
-  /**
-   * Look up a value from `stats` by one or more candidate keys (camelCase or snake_case).
-   * Returns the first truthy match, or '—' if none found.
-   */
   const value = (...keys) => {
-    // Build a normalised camelCase index over the stats object
     const normalized = Object.fromEntries(
       Object.entries(stats).map(([k, v]) => [
         k.replace(/[-_](.)/g, (_, char) => char.toUpperCase()),
@@ -89,246 +103,201 @@ export const Dashboard = () => {
   };
 
   const cards = [
-    ['apartment',       'Total Spaces',       value('totalSpaces', 'spaces'),             'Inventory availability',    false],
-    ['group',           'Total Users',         value('totalUsers', 'users'),               'Registered members',        false],
-    ['event_available', 'Total Bookings',      value('totalBookings', 'bookings'),         'Across all workspaces',     false],
-    ['pending_actions', 'Pending Bookings',    value('pendingBookings', 'pending'),        'Needs review',              true ],
-    ['task_alt',        'Approved Bookings',   value('approvedBookings', 'approved'),      'Confirmed reservations',    false],
-    ['event_busy',      'Cancelled Bookings',  value('cancelledBookings', 'cancelled'),    'Cancelled reservations',    false],
-    ['payments',        'Total Revenue',       `₹${value('totalRevenue', 'revenue')}`,     'Gross booking revenue',     true ],
-    ['build',           'Maintenance Windows', value('maintenanceCount', 'maintenance'),   'Active service blocks',     false],
+    ['apartment',       'Total Spaces',       value('totalSpaces', 'spaces'),             'Inventory availability',    false, '/admin/spaces'],
+    ['group',           'Total Users',         value('totalUsers', 'users'),               'Registered members',        false, '/admin/users'],
+    ['event_available', 'Total Bookings',      value('totalBookings', 'bookings'),         'Across all workspaces',     false, '/admin/bookings'],
+    ['pending_actions', 'Pending Bookings',    value('pendingBookings', 'pending'),        'Needs review',              true,  '/admin/bookings'],
+    ['task_alt',        'Approved Bookings',   value('approvedBookings', 'approved'),      'Confirmed reservations',    false, '/admin/bookings'],
+    ['event_busy',      'Cancelled Bookings',  value('cancelledBookings', 'cancelled'),    'Cancelled reservations',    false, '/admin/bookings'],
+    ['payments',        'Total Revenue',       `₹${Number(value('totalRevenue', 'revenue') || 0).toLocaleString('en-IN')}`, 'Gross booking revenue', true, '/admin/bookings'],
+    ['build',           'Maintenance Windows', value('maintenanceCount', 'maintenance'),   'Active & scheduled windows', false, '/admin/maintenance'],
   ];
 
   return (
-    <div className="w-full px-5 md:px-8 py-8 max-w-[1600px] mx-auto space-y-8">
+    <div className="w-full px-5 md:px-8 py-8 max-w-[1600px] mx-auto space-y-8 page-fade-in">
       {/* ── Header banner ── */}
-      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-5 flex flex-col md:flex-row gap-5 justify-between">
+      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col md:flex-row gap-5 justify-between shadow-xs">
         <div>
-          <p className="text-[11px] uppercase font-semibold tracking-widest text-primary">
+          <p className="text-[11px] uppercase font-bold tracking-widest text-primary">
             Platform operations
           </p>
           <h1 className="font-headline text-3xl text-on-surface mt-1">System Overview</h1>
           <p className="text-sm text-on-surface-variant mt-1">
-            Monitor booking activity, availability, and platform performance.
+            Monitor real-time booking activity, member accounts, space availability, and maintenance status.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-xs font-mono text-on-surface-variant">LIVE · UTC+00:00</span>
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs font-mono text-on-surface-variant font-semibold">LIVE PLATFORM TELEMETRY</span>
         </div>
       </section>
 
       {/* ── Error banner ── */}
       {error && (
-        <p className="rounded-lg bg-error-container p-3 text-sm text-error">{error}</p>
+        <div className="flex items-center gap-2 rounded-xl bg-error-container p-4 text-sm text-error border border-error/20">
+          <span className="material-symbols-outlined text-lg">error</span>
+          <span>{error}</span>
+        </div>
       )}
 
       {/* ── Stat cards ── */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {cards.map(([icon, label, number, detail, accent]) => (
-          <div
+        {cards.map(([icon, label, number, detail, accent, link]) => (
+          <Link
             key={label}
-            className={`rounded-xl border p-5 bg-surface-container-lowest ${
-              accent ? 'border-primary/40' : 'border-outline-variant'
+            to={link}
+            className={`group rounded-2xl border p-5 bg-surface-container-lowest transition-all hover:shadow-md hover:border-primary/40 block ${
+              accent ? 'border-primary/30' : 'border-outline-variant'
             }`}
           >
             <div className="flex items-center justify-between">
               <span
-                className={`material-symbols-outlined ${
-                  accent ? 'text-primary' : 'text-on-surface-variant'
+                className={`material-symbols-outlined text-2xl transition-transform group-hover:scale-110 ${
+                  accent ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'
                 }`}
               >
                 {icon}
               </span>
-              <span className="text-[10px] text-on-surface-variant">
-                {loading ? 'Loading…' : 'Live data'}
+              <span className="text-[10px] text-on-surface-variant font-medium flex items-center gap-1 group-hover:text-primary transition-colors">
+                View
+                <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
               </span>
             </div>
             <p
-              className={`text-[11px] font-semibold uppercase tracking-wider mt-5 ${
+              className={`text-[11px] font-bold uppercase tracking-wider mt-4 ${
                 accent ? 'text-primary' : 'text-on-surface-variant'
               }`}
             >
               {label}
             </p>
-            <p className="font-headline text-4xl text-on-surface mt-1">
+            <p className="font-headline text-3xl font-bold text-on-surface mt-1">
               {loading ? '…' : number}
             </p>
             <p className="text-[11px] text-on-surface-variant mt-2">{detail}</p>
-          </div>
+          </Link>
         ))}
       </section>
 
-      {/* ── Charts row ── */}
-      <section className="grid xl:grid-cols-12 gap-6">
-        {/* Booking Trends (hardcoded bars — no trends endpoint yet) */}
-        <div className="xl:col-span-7 rounded-xl border border-outline-variant bg-surface-container-lowest p-6">
-          <div className="flex justify-between">
+      {/* ── Two Column: Recent Bookings & Maintenance Windows ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Recent Bookings (2 cols) */}
+        <div className="lg:col-span-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-outline-variant/60 mb-4">
             <div>
-              <p className="text-[11px] uppercase font-semibold tracking-widest text-primary">
-                7-day performance
-              </p>
-              <h2 className="font-headline text-2xl text-on-surface mt-1">Booking Trends</h2>
+              <h2 className="font-headline text-xl font-bold text-on-surface">Recent Reservations</h2>
+              <p className="text-xs text-on-surface-variant mt-0.5">Latest booking requests across all spaces</p>
             </div>
-            <span className="text-xs text-on-surface-variant">Last 7 days</span>
-          </div>
-          <div className="h-56 mt-8 flex items-end gap-3 border-b border-outline-variant pb-3">
-            {[43, 56, 48, 68, 88, 73, 38].map((height, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <div
-                  className={`w-full max-w-8 rounded-t-md ${
-                    index === 4 ? 'bg-primary' : 'bg-primary-fixed-dim'
-                  }`}
-                  style={{ height: `${height}%` }}
-                />
-                <span className="text-[10px] text-on-surface-variant">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Revenue Breakdown */}
-        <div className="xl:col-span-5 rounded-xl border border-outline-variant bg-surface-container-lowest p-6">
-          <p className="text-[11px] uppercase font-semibold tracking-widest text-primary">
-            Financial health
-          </p>
-          <h2 className="font-headline text-2xl text-on-surface mt-1">Revenue Breakdown</h2>
-          <div className="mt-8 text-center">
-            <p className="font-headline text-5xl text-primary">
-              ₹{loading ? '…' : value('totalRevenue', 'revenue')}
-            </p>
-            <p className="text-xs text-on-surface-variant mt-2">Total revenue to date</p>
-          </div>
-          <div className="mt-8 space-y-4">
-            {[
-              ['Meeting rooms', '72%'],
-              ['Private suites', '53%'],
-              ['Flex desks', '38%'],
-            ].map(([name, width]) => (
-              <div key={name}>
-                <div className="flex justify-between text-xs text-on-surface-variant">
-                  <span>{name}</span>
-                  <span>{width}</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-surface-container">
-                  <div className="h-full rounded-full bg-primary" style={{ width }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Recent bookings + activity feed ── */}
-      <section className="grid xl:grid-cols-12 gap-6">
-        {/* Recent Booking Operations */}
-        <div className="xl:col-span-8 rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden">
-          <div className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] uppercase font-semibold tracking-widest text-primary">
-                Workflow
-              </p>
-              <h2 className="font-headline text-2xl text-on-surface mt-1">
-                Recent Booking Operations
-              </h2>
-            </div>
-            <Link to="/admin/bookings" className="text-xs font-semibold text-primary">
-              View all →
+            <Link to="/admin/bookings" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+              Manage Bookings
+              <span className="material-symbols-outlined text-sm">chevron_right</span>
             </Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-surface-container-low text-[10px] uppercase tracking-wider text-on-surface-variant">
-                <tr>
-                  <th className="px-6 py-3">Member</th>
-                  <th className="px-4 py-3">Workspace</th>
-                  <th className="px-4 py-3">Schedule</th>
-                  <th className="px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td className="px-6 py-8 text-sm text-on-surface-variant" colSpan="4">
-                      Loading…
-                    </td>
-                  </tr>
-                ) : bookings.length ? (
-                  bookings.map((b) => (
-                    <tr
-                      key={b.id}
-                      className="border-t border-outline-variant/60 text-xs"
-                    >
-                      <td className="px-6 py-4 font-semibold">
-                        {b.user?.name || b.userName || 'Member'}
-                      </td>
-                      <td className="px-4 py-4 text-on-surface-variant">
-                        {b.space?.name || b.spaceName || 'Workspace'}
-                      </td>
-                      <td className="px-4 py-4 text-on-surface-variant">
-                        {b.date || b.startTime || '—'}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="px-2 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-[10px] font-semibold">
-                          {b.status || 'PENDING'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td className="px-6 py-8 text-sm text-on-surface-variant" colSpan="4">
-                      No recent bookings.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        {/* Recent Activity feed */}
-        <div className="xl:col-span-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-6">
-          <p className="text-[11px] uppercase font-semibold tracking-widest text-primary">
-            System feed
-          </p>
-          <h2 className="font-headline text-2xl text-on-surface mt-1">Recent Activity</h2>
-          <div className="mt-6 space-y-5">
-            {activity.length ? (
-              activity.slice(0, 5).map((item, index) => (
-                <div key={item.id || index} className="flex gap-3">
-                  <span className="mt-1.5 w-2 h-2 bg-primary rounded-full flex-none" />
-                  <div>
-                    <p className="text-xs text-on-surface">
-                      {item.message || item.description || item.type}
-                    </p>
-                    <p className="text-[10px] text-on-surface-variant mt-1">
-                      {item.createdAt || item.time || 'Just now'}
-                    </p>
+          <div className="divide-y divide-outline-variant/60">
+            {bookings.length > 0 ? (
+              bookings.map((booking) => (
+                <div key={booking.id} className="py-3.5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center flex-shrink-0 text-xs">
+                      {(booking.user?.name || 'M').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-on-surface truncate">{booking.user?.name || 'Member'}</p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {booking.space?.name || 'Space'} · {new Date(booking.startTime).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-xs font-bold text-on-surface">
+                      ₹{Number(booking.totalAmount || 0).toLocaleString('en-IN')}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                        String(booking.status).toUpperCase() === 'APPROVED'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : String(booking.status).toUpperCase() === 'PENDING'
+                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                          : 'bg-surface-container text-on-surface-variant border border-outline-variant'
+                      }`}
+                    >
+                      {booking.status}
+                    </span>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-on-surface-variant">
-                No recent operational activity.
-              </p>
+              <p className="py-8 text-center text-sm text-on-surface-variant">No reservations found.</p>
             )}
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-3">
+        </div>
+
+        {/* Right Column: Maintenance Windows & Quick Actions */}
+        <div className="space-y-6">
+          {/* Active Maintenance Panel */}
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/60 mb-3">
+              <h2 className="font-headline text-lg font-bold text-on-surface">Maintenance</h2>
+              <Link to="/admin/maintenance" className="text-xs font-semibold text-primary hover:underline">
+                View all
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {maintenanceItems.length > 0 ? (
+                maintenanceItems.map((item) => (
+                  <div key={item.id} className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 text-xs">
+                    <div className="flex items-center justify-between font-semibold text-on-surface">
+                      <span className="truncate">{item.space?.name || 'Space Maintenance'}</span>
+                      <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-mono">
+                        Active
+                      </span>
+                    </div>
+                    <p className="text-on-surface-variant mt-1 text-[11px]">{item.reason || item.title || 'Scheduled upkeep'}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="py-4 text-center text-xs text-on-surface-variant">No maintenance windows scheduled.</p>
+              )}
+            </div>
+
             <Link
-              className="rounded-lg bg-primary py-2.5 text-center text-xs font-semibold text-on-primary"
-              to="/admin/bookings"
+              to="/admin/maintenance"
+              className="mt-4 block w-full py-2 text-center text-xs font-semibold rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
             >
-              Review bookings
+              + Schedule Maintenance Window
             </Link>
-            <Link
-              className="rounded-lg bg-surface-container py-2.5 text-center text-xs font-semibold text-on-surface"
-              to="/admin/spaces/new"
-            >
-              Create space
-            </Link>
+          </div>
+
+          {/* Quick Operations Links */}
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xs">
+            <h3 className="font-headline text-lg font-bold text-on-surface mb-3">Quick Navigation</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Link
+                to="/admin/spaces/new"
+                className="py-2.5 px-3 rounded-xl bg-primary text-on-primary text-xs font-semibold text-center hover:bg-on-primary-fixed-variant transition-colors"
+              >
+                + New Space
+              </Link>
+              <Link
+                to="/admin/users"
+                className="py-2.5 px-3 rounded-xl bg-surface-container text-on-surface text-xs font-semibold text-center hover:bg-surface-container-high transition-colors"
+              >
+                Manage Users
+              </Link>
+              <Link
+                to="/admin/bookings"
+                className="py-2.5 px-3 rounded-xl bg-surface-container text-on-surface text-xs font-semibold text-center hover:bg-surface-container-high transition-colors"
+              >
+                All Bookings
+              </Link>
+              <Link
+                to="/admin/roles"
+                className="py-2.5 px-3 rounded-xl bg-surface-container text-on-surface text-xs font-semibold text-center hover:bg-surface-container-high transition-colors"
+              >
+                RBAC Roles
+              </Link>
+            </div>
           </div>
         </div>
       </section>

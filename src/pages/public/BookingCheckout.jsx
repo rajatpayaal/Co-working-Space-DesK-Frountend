@@ -13,10 +13,23 @@ export const BookingCheckout = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isAuthenticated, currentUser } = useAuth();
+  const { isAuthenticated, currentUser, isAdmin } = useAuth();
 
   const [space, setSpace] = useState(null);
   const [loadingSpace, setLoadingSpace] = useState(true);
+
+  // Smart go back handler
+  const handleGoBack = () => {
+    if (window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0) {
+      navigate(-1);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else if (isAdmin) {
+      navigate('/admin/spaces');
+    } else {
+      navigate(`/spaces/${id}`);
+    }
+  };
 
   // Form State
   const [form, setForm] = useState({
@@ -31,28 +44,44 @@ export const BookingCheckout = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // Fetch Space info
+  // Fetch Space info (with admin fallback for unpublished/inactive spaces)
   useEffect(() => {
     let active = true;
     setLoadingSpace(true);
-    spacesApi
-      .getById(id)
-      .then((res) => {
-        if (!active) return;
-        setSpace(unwrapResponse(res));
-      })
-      .catch((err) => {
-        if (!active) return;
-        setSubmitError(err?.response?.data?.message || 'Unable to load workspace details.');
-      })
-      .finally(() => {
+    const loadSpace = async () => {
+      try {
+        let res;
+        try {
+          res = await spacesApi.getById(id);
+        } catch (publicErr) {
+          if (isAdmin || publicErr?.response?.status === 404) {
+            res = await spacesApi.getAdminById(id);
+          } else {
+            throw publicErr;
+          }
+        }
+        if (active) {
+          setSpace(unwrapResponse(res));
+        }
+      } catch (err) {
+        if (active) {
+          setSubmitError(
+            err?.response?.data?.message ||
+              err?.message ||
+              'This workspace could not be loaded or does not exist.'
+          );
+        }
+      } finally {
         if (active) setLoadingSpace(false);
-      });
+      }
+    };
+
+    loadSpace();
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, isAdmin]);
 
   // Compute duration in hours and total price
   const { hours, totalCost } = useMemo(() => {
@@ -146,17 +175,47 @@ export const BookingCheckout = () => {
     return <PageLoader message="Loading checkout details..." />;
   }
 
+  if (!space) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-20 page-fade-in">
+        <Button variant="secondary" size="sm" className="mb-6" onClick={handleGoBack}>
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+          Go Back
+        </Button>
+        <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant p-10 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-error/10 text-error flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-3xl">error_outline</span>
+          </div>
+          <h2 className="font-headline text-2xl text-on-surface">Workspace Not Found</h2>
+          <p className="text-sm text-on-surface-variant mt-2 max-w-md mx-auto">
+            {submitError || 'This space might be inactive or does not exist.'}
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <Button variant="secondary" size="md" onClick={handleGoBack}>
+              Go Back
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => navigate(isAdmin ? '/admin/spaces' : '/spaces')}
+            >
+              Browse All Workspaces
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-on-surface pb-20">
       {/* ── Page Header ────────────────────────────────────────────── */}
       <section className="bg-surface-container-lowest border-b border-outline-variant/60 py-6">
         <div className="max-w-6xl mx-auto px-6">
-          <Link to={`/spaces/${id}`}>
-            <Button variant="secondary" size="sm" className="mb-3">
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
-              Back to Details
-            </Button>
-          </Link>
+          <Button variant="secondary" size="sm" className="mb-3" onClick={handleGoBack}>
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            Back to Details
+          </Button>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="font-headline text-3xl font-medium text-on-surface">Confirm Your Reservation</h1>

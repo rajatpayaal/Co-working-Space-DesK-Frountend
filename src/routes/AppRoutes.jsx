@@ -14,6 +14,7 @@ import SpaceDetails from '../pages/public/SpaceDetails';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import BookingCheckout from '../pages/public/BookingCheckout';
+import NotFound from '../pages/public/NotFound';
 
 // Member pages
 import MemberDashboard from '../pages/member/Dashboard';
@@ -81,8 +82,10 @@ export const AppRoutes = () => {
         <Route path="/admin/roles" element={<RolesPermissions />} />
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Fallback 404 Route */}
+      <Route element={<PublicLayout />}>
+        <Route path="*" element={<NotFound />} />
+      </Route>
     </Routes>
   );
 };
