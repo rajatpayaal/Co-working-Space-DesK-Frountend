@@ -42,8 +42,10 @@ export const AdminLayout = () => {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="xl:hidden fixed inset-0 z-40">
-          <div className="fixed inset-0 bg-inverse-surface/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <AdminSidebar onClose={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 bg-inverse-surface/50 backdrop-blur-sm animate-fade-in" onClick={() => setSidebarOpen(false)} />
+          <div className="relative z-50 h-full w-72 animate-slide-in-left">
+            <AdminSidebar onClose={() => setSidebarOpen(false)} />
+          </div>
         </div>
       )}
 
@@ -121,7 +123,7 @@ export const AdminLayout = () => {
 
         {/* Page Content */}
         <main className="flex-1 pt-16 min-h-screen bg-surface">
-          <div className="w-full px-6 xl:px-8 py-8 max-w-[1600px] mx-auto">
+          <div className="w-full px-6 xl:px-8 py-8 max-w-[1600px] mx-auto page-fade-in">
             <Outlet />
           </div>
         </main>

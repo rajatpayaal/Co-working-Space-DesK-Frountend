@@ -87,7 +87,7 @@ export const Header = () => {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="xl:hidden bg-surface-container-lowest border-t border-outline-variant shadow-lg">
+        <div className="xl:hidden bg-surface-container-lowest border-t border-outline-variant shadow-lg animate-slide-down">
           <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-3">
             <Link to="/spaces" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-on-surface-variant py-2 hover:text-primary transition-colors">Explore Spaces</Link>
             {!isAuthenticated ? (

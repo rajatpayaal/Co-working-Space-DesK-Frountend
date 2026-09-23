@@ -186,7 +186,7 @@ export const SuggestionInput = ({
 
         {/* ── Suggestions Dropdown Menu ────────────────────────────────────────── */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="absolute top-full left-0 right-0 mt-1.5 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto animate-dropdown">
             <div className="p-1.5 space-y-0.5">
               <div className="px-3 py-1.5 flex items-center justify-between border-b border-outline-variant/40">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-on-surface-variant/70">

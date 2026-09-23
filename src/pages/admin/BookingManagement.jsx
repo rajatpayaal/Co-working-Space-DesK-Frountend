@@ -112,9 +112,9 @@ const RejectModal = ({ bookingId, onConfirm, onCancel, isLoading }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
       <div
-        className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl animate-scale-in"
         role="dialog"
         aria-modal="true"
         aria-labelledby="reject-modal-title"

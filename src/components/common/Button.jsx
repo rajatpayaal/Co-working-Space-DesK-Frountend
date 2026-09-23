@@ -11,14 +11,14 @@ export const Button = ({
   onClick,
   ...props
 }) => {
-  const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all rounded-lg whitespace-nowrap cursor-pointer select-none border';
+  const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 ease-out rounded-lg whitespace-nowrap cursor-pointer select-none border active:scale-[0.98]';
 
   const variants = {
-    primary: 'bg-primary text-on-primary border-transparent hover:bg-on-primary-fixed-variant shadow-sm',
-    secondary: 'bg-surface-container-lowest text-on-surface border-outline-variant hover:bg-surface-container-low',
-    danger: 'bg-error text-on-error border-transparent hover:opacity-90',
+    primary: 'bg-primary text-on-primary border-transparent hover:bg-on-primary-fixed-variant shadow-sm hover:shadow active:shadow-xs',
+    secondary: 'bg-surface-container-lowest text-on-surface border-outline-variant hover:bg-surface-container-low hover:border-outline',
+    danger: 'bg-error text-on-error border-transparent hover:opacity-90 active:opacity-95',
     ghost: 'bg-transparent text-on-surface border-transparent hover:bg-surface-container',
-    outline: 'bg-transparent text-on-surface border-outline-variant hover:bg-surface-container-low',
+    outline: 'bg-transparent text-on-surface border-outline-variant hover:bg-surface-container-low hover:border-outline',
   };
 
   const sizes = {

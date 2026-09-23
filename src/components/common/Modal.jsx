@@ -21,13 +21,13 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop with fade-in */}
       <div
-        className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      {/* Modal panel */}
-      <div className={`relative z-10 w-full ${sizes[size] || sizes.md} bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant overflow-hidden`}>
+      {/* Modal panel with smooth scale-up */}
+      <div className={`relative z-10 w-full ${sizes[size] || sizes.md} bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant overflow-hidden animate-scale-in`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
           <h3 className="font-headline text-lg font-semibold text-on-surface">{title}</h3>
