@@ -54,7 +54,7 @@ export const BookingCheckout = () => {
         try {
           res = await spacesApi.getById(id);
         } catch (publicErr) {
-          if (isAdmin || publicErr?.response?.status === 404) {
+          if (isAdmin) {
             res = await spacesApi.getAdminById(id);
           } else {
             throw publicErr;

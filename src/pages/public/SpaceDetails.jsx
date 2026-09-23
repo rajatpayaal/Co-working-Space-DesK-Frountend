@@ -62,7 +62,7 @@ export const SpaceDetails = () => {
       try {
         res = await spacesApi.getById(id);
       } catch (publicErr) {
-        if (isAdmin || publicErr?.response?.status === 404) {
+        if (isAdmin) {
           res = await spacesApi.getAdminById(id);
         } else {
           throw publicErr;
@@ -148,7 +148,11 @@ export const SpaceDetails = () => {
 
   const amenitiesList =
     Array.isArray(space.amenities) && space.amenities.length > 0
-      ? space.amenities.map((a) => ({ label: a, icon: 'check_circle' }))
+      ? space.amenities.map((a) => {
+          if (typeof a === 'string') return { label: a, icon: 'check_circle' };
+          if (a && typeof a === 'object') return { label: a.label || a.name || 'Amenity', icon: a.icon || 'check_circle' };
+          return { label: String(a), icon: 'check_circle' };
+        })
       : DEFAULT_AMENITIES;
 
   return (
@@ -259,7 +263,7 @@ export const SpaceDetails = () => {
                       {amenity.icon || 'verified'}
                     </span>
                     <span className="text-sm font-medium text-on-surface">
-                      {amenity.label || amenity}
+                      {amenity?.label || 'Amenity'}
                     </span>
                   </div>
                 ))}
@@ -316,18 +320,32 @@ export const SpaceDetails = () => {
                   </div>
                 ) : slots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                    {slots.slice(0, 12).map((slot, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-2 rounded-lg text-center text-[11px] font-mono border ${
-                          slot.isAvailable
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-surface-container text-on-surface-variant/50 border-outline-variant line-through'
-                        }`}
-                      >
-                        {slot.startTime?.slice(11, 16) || slot.time || slot}
-                      </div>
-                    ))}
+                    {slots.slice(0, 12).map((slot, idx) => {
+                      const isSlotOpen = slot?.available !== false && slot?.isAvailable !== false;
+                      let timeText = `Slot ${idx + 1}`;
+                      if (typeof slot === 'string') {
+                        timeText = slot;
+                      } else if (slot?.startTime) {
+                        timeText = slot.startTime.includes('T')
+                          ? slot.startTime.slice(11, 16)
+                          : slot.startTime;
+                      } else if (slot?.time) {
+                        timeText = String(slot.time);
+                      }
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-2 rounded-lg text-center text-[11px] font-mono border ${
+                            isSlotOpen
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-surface-container text-on-surface-variant/50 border-outline-variant line-through'
+                          }`}
+                        >
+                          {timeText}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="p-3 bg-surface-container-low rounded-xl text-xs text-on-surface-variant text-center">
