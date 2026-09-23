@@ -6,6 +6,20 @@
 
 ## 🌐 Live Demo — Try It Now!
 
+### 🔑 Demo Credentials
+
+To evaluate the application roles and permission flows, you can use the seeded test accounts:
+
+* **Admin Account:**
+* **Email:** `admin@coworking.com`
+* **Password:** `Admin@123`
+
+
+* **Member Account:**
+* **Email:** `member@coworking.com`
+* **Password:** `Member@123`
+
+
 The app is fully deployed and live. Go ahead, click around:
 
 | What | Link |
