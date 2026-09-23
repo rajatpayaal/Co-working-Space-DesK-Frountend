@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import spacesApi from '../../api/spacesApi';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -19,6 +19,7 @@ const spaceImagePool = [
 
 export const Landing = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,6 +28,19 @@ export const Landing = () => {
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedCapacity, setSelectedCapacity] = useState('all');
+
+  // Handle in-page smooth scrolling when landing with hash (e.g., /#amenities, /#pricing)
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location.hash]);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,7 +74,18 @@ export const Landing = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    navigate('/spaces');
+    const params = new URLSearchParams();
+    if (selectedType && selectedType !== 'all') {
+      params.set('type', selectedType);
+    }
+    if (selectedCapacity && selectedCapacity !== 'all') {
+      params.set('capacity', selectedCapacity);
+    }
+    if (selectedLocation && selectedLocation !== 'all') {
+      params.set('location', selectedLocation);
+    }
+    const query = params.toString();
+    navigate(query ? `/spaces?${query}` : '/spaces');
   };
 
   return (

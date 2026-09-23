@@ -23,13 +23,26 @@ export const ExploreSpaces = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Filter state
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [capacityFilter, setCapacityFilter] = useState('all'); // all | solo | team | conference | large
-  const [maxPrice, setMaxPrice] = useState('');
+  // Filter state initialized from URL params
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get('search') || searchParams.get('q') || searchParams.get('type') || searchParams.get('location') || ''
+  );
+  const [capacityFilter, setCapacityFilter] = useState(searchParams.get('capacity') || 'all');
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Sync state if URL query params change (e.g. from Landing reservation form or back/forward)
+  useEffect(() => {
+    const q = searchParams.get('search') || searchParams.get('q') || searchParams.get('type') || searchParams.get('location') || '';
+    const cap = searchParams.get('capacity') || 'all';
+    const price = searchParams.get('maxPrice') || '';
+    setSearchQuery(q);
+    setCapacityFilter(cap);
+    setMaxPrice(price);
+    setCurrentPage(1);
+  }, [searchParams]);
 
   // Data state
   const [spaces, setSpaces] = useState([]);
@@ -170,6 +183,7 @@ export const ExploreSpaces = () => {
     setSortBy('createdAt');
     setSortOrder('desc');
     setCurrentPage(1);
+    setSearchParams({});
   };
 
   return (

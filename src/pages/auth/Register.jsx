@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authApi from '../../api/authApi';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 
 export const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +29,13 @@ export const Register = () => {
         password: form.password,
       };
       await authApi.register(payload);
-      navigate('/login', { replace: true, state: { message: 'Account created successfully! Please sign in.' } });
+      navigate('/login', {
+        replace: true,
+        state: {
+          message: 'Account created successfully! Please sign in.',
+          from: location.state?.from,
+        },
+      });
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'Unable to create your account.');
     } finally {
@@ -114,7 +121,11 @@ export const Register = () => {
 
           <p className="text-xs text-center text-on-surface-variant pt-2">
             Already registered?{' '}
-            <Link to="/login" className="text-primary font-semibold hover:underline">
+            <Link
+              to="/login"
+              state={{ from: location.state?.from }}
+              className="text-primary font-semibold hover:underline"
+            >
               Sign In
             </Link>
           </p>

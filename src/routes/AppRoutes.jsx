@@ -1,7 +1,8 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { PageLoader } from '../components/common/LoadingSpinner';
+import ScrollToTop from '../components/common/ScrollToTop';
 
 // Layouts
 import PublicLayout from '../components/layout/PublicLayout';
@@ -33,24 +34,35 @@ import RolesPermissions from '../pages/admin/RolesPermissions';
 // Route Guards
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <PageLoader />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
   if (requireAdmin && !isAdmin) return <Navigate to="/dashboard" replace />;
   return children;
 };
 
 const GuestRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <PageLoader />;
   if (isAuthenticated) {
-    return <Navigate to={isAdmin ? '/admin/dashboard' : '/dashboard'} replace />;
+    const from = location.state?.from;
+    let target = isAdmin ? '/admin/dashboard' : '/dashboard';
+    if (typeof from === 'string') {
+      target = from;
+    } else if (from?.pathname) {
+      target = `${from.pathname}${from.search || ''}`;
+    }
+    return <Navigate to={target} replace />;
   }
   return children;
 };
 
 export const AppRoutes = () => {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Landing />} />
@@ -87,6 +99,7 @@ export const AppRoutes = () => {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </>
   );
 };
 

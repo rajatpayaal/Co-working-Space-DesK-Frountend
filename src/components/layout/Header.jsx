@@ -1,11 +1,24 @@
 import React, { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 export const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, isAdmin, isMember, logout, currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNavToSection = (sectionId) => {
+    if (location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate(`/#${sectionId}`);
+    }
+    setMobileOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -29,8 +42,20 @@ export const Header = () => {
           <NavLink to="/spaces" className={({ isActive }) =>
             `text-sm transition-colors font-medium ${isActive ? 'text-primary font-semibold' : 'text-on-surface-variant hover:text-on-surface'}`
           }>Explore Spaces</NavLink>
-          <a href="#amenities" className="text-sm text-on-surface-variant hover:text-on-surface transition-colors font-medium">Amenities & Perks</a>
-          <a href="#pricing" className="text-sm text-on-surface-variant hover:text-on-surface transition-colors font-medium">Pricing</a>
+          <button
+            type="button"
+            onClick={() => handleNavToSection('amenities')}
+            className="text-sm text-on-surface-variant hover:text-on-surface transition-colors font-medium cursor-pointer"
+          >
+            Amenities & Perks
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNavToSection('pricing')}
+            className="text-sm text-on-surface-variant hover:text-on-surface transition-colors font-medium cursor-pointer"
+          >
+            Pricing
+          </button>
           {isAuthenticated && isMember && (
             <>
               <NavLink to="/dashboard" className={({ isActive }) =>
@@ -90,6 +115,20 @@ export const Header = () => {
         <div className="xl:hidden bg-surface-container-lowest border-t border-outline-variant shadow-lg animate-slide-down">
           <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-3">
             <Link to="/spaces" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-on-surface-variant py-2 hover:text-primary transition-colors">Explore Spaces</Link>
+            <button
+              type="button"
+              onClick={() => handleNavToSection('amenities')}
+              className="text-sm font-medium text-on-surface-variant py-2 hover:text-primary transition-colors text-left cursor-pointer"
+            >
+              Amenities & Perks
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavToSection('pricing')}
+              className="text-sm font-medium text-on-surface-variant py-2 hover:text-primary transition-colors text-left cursor-pointer"
+            >
+              Pricing
+            </button>
             {!isAuthenticated ? (
               <>
                 <Link to="/login" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-on-surface-variant py-2 hover:text-primary transition-colors">Sign In</Link>

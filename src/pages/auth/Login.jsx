@@ -32,9 +32,15 @@ export const Login = () => {
 
       login(user, token);
 
-      const redirectPath =
-        location.state?.from?.pathname ||
-        (['ADMIN', 'SUPER_ADMIN'].includes(user.role) ? '/admin/dashboard' : '/dashboard');
+      const from = location.state?.from;
+      let redirectPath;
+      if (typeof from === 'string') {
+        redirectPath = from;
+      } else if (from?.pathname) {
+        redirectPath = `${from.pathname}${from.search || ''}`;
+      } else {
+        redirectPath = ['ADMIN', 'SUPER_ADMIN'].includes(user.role) ? '/admin/dashboard' : '/dashboard';
+      }
 
       navigate(redirectPath, { replace: true });
     } catch (err) {
@@ -109,7 +115,11 @@ export const Login = () => {
 
           <p className="text-xs text-center text-on-surface-variant pt-2">
             Don't have an account yet?{' '}
-            <Link to="/register" className="text-primary font-semibold hover:underline">
+            <Link
+              to="/register"
+              state={{ from: location.state?.from }}
+              className="text-primary font-semibold hover:underline"
+            >
               Create an account
             </Link>
           </p>
